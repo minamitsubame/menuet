@@ -15,7 +15,9 @@ import "C"
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -37,6 +39,9 @@ type Application struct {
 
 	// NotificationResponder is a handler called when notification respond
 	NotificationResponder func(id, response string)
+
+	// QuitCallback is called before exits to do necessary cleanup
+	QuitCallback func()
 
 	alertChannel          chan AlertClicked
 	currentState          *MenuState
@@ -62,6 +67,10 @@ func App() *Application {
 
 // RunApplication does not return
 func (a *Application) RunApplication() {
+	defer os.Exit(0)
+	if a.QuitCallback != nil {
+		defer a.QuitCallback()
+	}
 	if a.AutoUpdate.Version != "" && a.AutoUpdate.Repo != "" {
 		go a.checkForUpdates()
 	}
@@ -173,4 +182,11 @@ func toggleStartup() {
 		a.addStartupItem()
 	}
 	go a.sendState(a.currentState)
+}
+
+//export quit
+func quit() {
+	// Use Goexit to make sure the defer functions in RunApplication
+	// will be called before os.Exit
+	runtime.Goexit()
 }

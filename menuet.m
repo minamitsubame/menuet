@@ -9,6 +9,7 @@ const char *children(const char *);
 void menuClosed(const char *);
 bool runningAtStartup();
 void toggleStartup();
+void quit();
 
 NSStatusItem *_statusItem;
 
@@ -205,9 +206,56 @@ void menuChanged() {
 	});
 }
 
+// ref: https://stackoverflow.com/questions/970707/cocoa-keyboard-shortcuts-in-dialog-without-an-edit-menu
+@interface ApplicationWithKeyboardEvent: NSApplication {}
+@end
+
+@implementation ApplicationWithKeyboardEvent
+- (void)sendEvent:(NSEvent *)event {
+    if (event.type == NSEventTypeKeyDown) {
+        NSString *inputKey = [event.charactersIgnoringModifiers lowercaseString];
+        if ((event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) == NSEventModifierFlagCommand ||
+            (event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand | NSEventModifierFlagShift)) {
+            if ([inputKey isEqualToString:@"x"]) {
+                if ([self sendAction:@selector(cut:) to:nil from:self])
+                    return;
+            }
+            else if ([inputKey isEqualToString:@"c"]) {
+                if ([self sendAction:@selector(copy:) to:nil from:self])
+                    return;
+            }
+            else if ([inputKey isEqualToString:@"v"]) {
+                if ([self sendAction:@selector(paste:) to:nil from:self])
+                    return;
+            }
+            else if ([inputKey isEqualToString:@"z"]) {
+                if ([self sendAction:NSSelectorFromString(@"undo:") to:nil from:self])
+                    return;
+            }
+            else if ([inputKey isEqualToString:@"a"]) {
+                if ([self sendAction:@selector(selectAll:) to:nil from:self])
+                    return;
+            }
+        }
+        else if ((event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand | NSEventModifierFlagShift) ||
+                 (event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand | NSEventModifierFlagShift | NSEventModifierFlagCapsLock)) {
+            if ([inputKey isEqualToString:@"z"]) {
+                if ([self sendAction:NSSelectorFromString(@"redo:") to:nil from:self])
+                    return;
+            }
+        }
+    }
+    [super sendEvent:event];
+}
+
+// Blank Selectors to silence Xcode warnings: 'Undeclared selector undo:/redo:'
+- (IBAction)undo:(id)sender {}
+- (IBAction)redo:(id)sender {}
+@end
+
 void createAndRunApplication() {
         [NSAutoreleasePool new];
-        NSApplication *a = NSApplication.sharedApplication;
+        NSApplication *a = ApplicationWithKeyboardEvent.sharedApplication;
         MenuetAppDelegate *d = [MenuetAppDelegate new];
         [a setDelegate:d];
         [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:d];
@@ -224,6 +272,7 @@ void createAndRunApplication() {
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:
         (NSApplication *)sender {
+		quit();
         return NSTerminateNow;
 }
 

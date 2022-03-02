@@ -3,6 +3,7 @@ Golang library to create menubar apps- programs that live only in OSX's NSStatus
 
 ## Development Status
 
+Added exit callback and Cmd+C/Cmd+V support.
 Under active development. API still changing rapidly.
 
 ## Installation
